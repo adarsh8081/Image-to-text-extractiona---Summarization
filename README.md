@@ -2,6 +2,24 @@
 
 A web application that extracts text from images using OCR (Optical Character Recognition) and generates summaries of the extracted text. The application provides both a web interface and a command-line interface for easy usage.
 
+## Screenshots
+
+### Home Page
+![Home Page](screenshots/home.png)
+*The main interface with drag-and-drop upload functionality*
+
+### Text Extraction
+![Text Extraction](screenshots/extraction.png)
+*Example of text extracted from an uploaded image*
+
+### Text Summarization
+![Text Summarization](screenshots/summary.png)
+*Generated summary of the extracted text*
+
+### Error Handling
+![Error Handling](screenshots/error.png)
+*Example of error handling when Tesseract is not properly configured*
+
 ## Features
 
 - Text extraction from images using Tesseract OCR
