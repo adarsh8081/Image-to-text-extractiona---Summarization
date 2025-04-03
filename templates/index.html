@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Text Extraction and Summarization</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
         * {
             margin: 0;
@@ -113,24 +114,24 @@
             display: none;
         }
     </style>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body>
     <div class="container">
         <h1>Text Extraction and Summarization</h1>
         
-        <div class="upload-section">
-            <input type="file" id="imageInput" accept="image/*">
-            <label for="imageInput">
-                <i class="fas fa-cloud-upload-alt"></i>
-                <p>Click to upload an image or drag and drop</p>
-                <p style="font-size: 0.8rem; color: #666;">Supported formats: PNG, JPG, JPEG</p>
-            </label>
-        </div>
+        <form id="uploadForm" enctype="multipart/form-data">
+            <div class="upload-section">
+                <label for="imageInput">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>Click to upload an image or drag and drop</p>
+                    <p style="font-size: 0.8rem; color: #666;">Supported formats: JPG, PNG, JPEG</p>
+                </label>
+                <input type="file" id="imageInput" name="image" accept="image/*" required>
+            </div>
+        </form>
 
-        <div class="error" id="error"></div>
-
-        <div class="loading">
+        <div class="error" id="errorMessage"></div>
+        <div class="loading" id="loading">
             <div class="loading-spinner"></div>
             <p>Processing your image...</p>
         </div>
@@ -148,72 +149,91 @@
     </div>
 
     <script>
-        const uploadSection = document.querySelector('.upload-section');
-        const imageInput = document.getElementById('imageInput');
-        const loading = document.querySelector('.loading');
-        const results = document.getElementById('results');
-        const error = document.getElementById('error');
-        const extractedText = document.getElementById('extractedText');
-        const summary = document.getElementById('summary');
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('uploadForm');
+            const imageInput = document.getElementById('imageInput');
+            const loading = document.getElementById('loading');
+            const results = document.getElementById('results');
+            const errorMessage = document.getElementById('errorMessage');
+            const extractedText = document.getElementById('extractedText');
+            const summary = document.getElementById('summary');
 
-        // Handle drag and drop
-        uploadSection.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadSection.style.borderColor = '#007bff';
-        });
-
-        uploadSection.addEventListener('dragleave', () => {
-            uploadSection.style.borderColor = '#ccc';
-        });
-
-        uploadSection.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadSection.style.borderColor = '#ccc';
-            const file = e.dataTransfer.files[0];
-            if (file && file.type.startsWith('image/')) {
-                handleFile(file);
-            }
-        });
-
-        imageInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                handleFile(file);
-            }
-        });
-
-        function handleFile(file) {
-            const formData = new FormData();
-            formData.append('image', file);
-
-            // Show loading, hide results and error
-            loading.style.display = 'block';
-            results.style.display = 'none';
-            error.style.display = 'none';
-
-            fetch('/process', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-                
-                // Display results
-                extractedText.textContent = data.extracted_text;
-                summary.textContent = data.summary;
-                results.style.display = 'block';
-            })
-            .catch(err => {
-                error.textContent = err.message;
-                error.style.display = 'block';
-            })
-            .finally(() => {
-                loading.style.display = 'none';
+            // Handle drag and drop
+            const uploadSection = document.querySelector('.upload-section');
+            
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                uploadSection.addEventListener(eventName, preventDefaults, false);
             });
-        }
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                uploadSection.addEventListener(eventName, highlight, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                uploadSection.addEventListener(eventName, unhighlight, false);
+            });
+
+            function highlight(e) {
+                uploadSection.classList.add('highlight');
+            }
+
+            function unhighlight(e) {
+                uploadSection.classList.remove('highlight');
+            }
+
+            uploadSection.addEventListener('drop', handleDrop, false);
+
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                imageInput.files = files;
+                handleSubmit();
+            }
+
+            // Handle file selection
+            imageInput.addEventListener('change', handleSubmit);
+
+            function handleSubmit() {
+                if (!imageInput.files.length) return;
+
+                const formData = new FormData();
+                formData.append('image', imageInput.files[0]);
+
+                // Show loading, hide results and error
+                loading.style.display = 'block';
+                results.style.display = 'none';
+                errorMessage.style.display = 'none';
+
+                fetch('/process', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    loading.style.display = 'none';
+                    
+                    if (data.error) {
+                        errorMessage.textContent = data.error;
+                        errorMessage.style.display = 'block';
+                        return;
+                    }
+
+                    extractedText.textContent = data.extracted_text;
+                    summary.textContent = data.summary;
+                    results.style.display = 'block';
+                })
+                .catch(error => {
+                    loading.style.display = 'none';
+                    errorMessage.textContent = 'An error occurred while processing the image.';
+                    errorMessage.style.display = 'block';
+                });
+            }
+        });
     </script>
 </body>
 </html> 
